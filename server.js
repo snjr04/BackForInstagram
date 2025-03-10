@@ -3,7 +3,7 @@ const { chromium } = require("playwright");
 const cors = require("cors");
 const fs = require("fs");
 
-const PORT = 30000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = "valid_credentials.json";
 
 const app = express();
