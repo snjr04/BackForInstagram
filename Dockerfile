@@ -1,23 +1,23 @@
-# Используем официальный образ Node.js
-FROM node:18
+# Базовый образ
+FROM mcr.microsoft.com/playwright:v1.51.0
 
-# Устанавливаем рабочую директорию внутри контейнера
+# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем package.json и package-lock.json перед установкой зависимостей
-COPY package*.json ./
+# Копируем package.json и package-lock.json
+COPY package.json package-lock.json ./
 
-# Устанавливаем зависимости
-RUN npm install --unsafe-perm
+# Устанавливаем зависимости без пост-инсталляции
+RUN npm install --omit=dev --unsafe-perm
 
-# Устанавливаем Playwright с зависимостями и даём права на выполнение
-RUN chmod -R 777 /root/.cache/ms-playwright && npx playwright install --with-deps
-
-# Копируем все файлы проекта в контейнер
+# Копируем остальной код проекта
 COPY . .
 
-# Открываем порт, который будет использовать сервер
+# Устанавливаем Playwright вручную
+RUN npx playwright install --with-deps
+
+# Открываем порт
 EXPOSE 3000
 
-# Запуск сервера при старте контейнера
-CMD ["npm", "start"]
+# Запускаем сервер
+CMD ["node", "server.js"]
