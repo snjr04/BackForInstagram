@@ -54,6 +54,7 @@ app.post("/check", async (request, reply) => {
     const page = await browser.newPage();
 
     try {
+        console.log("Загружаем страницу авторизации...");
         await page.goto("https://www.instagram.com/accounts/login/");
         console.log("Загружена страница авторизации...");
 
