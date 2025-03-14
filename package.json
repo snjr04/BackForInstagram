@@ -9,9 +9,8 @@
     "playwright": "^1.51.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "postinstall": "npx playwright install --with-deps"
+    "postinstall": "chmod +x node_modules/.bin/playwright && npx playwright install --with-deps"
   },
   "keywords": [],
   "author": "",
