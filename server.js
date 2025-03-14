@@ -62,25 +62,35 @@ app.post("/check", async (request, reply) => {
         await page.click("button[type='submit']");
         console.log("Кнопка 'Войти' нажата");
 
-        // Ожидание 5 секунд для выполнения редиректа или ошибки
+        // Дополнительная задержка для проверки редиректа
         await page.waitForTimeout(5000);
 
+        // Проверка на наличие ошибок авторизации
+        const errorMessage = await page.locator("div.xkmlbd1.xvs91rp.xd4r4e8.x1anpbxc.x1m39q7l.xyorhqc.x540dpk.x2b8uid").count();
+        if (errorMessage > 0) {
+            console.log("Ошибка входа: неверные данные.");
+            await browser.close();
+            return reply.send({ error: true, message: "Неверный логин или пароль" });
+        }
+
+        // Проверка на успешный редирект
         let loginSuccess = false;
         for (let i = 0; i < 10; i++) {
             await page.waitForTimeout(1000);
             const currentUrl = page.url();
             console.log("Текущий URL:", currentUrl);
 
-            const errorMessage = await page.locator("div.xkmlbd1.xvs91rp.xd4r4e8.x1anpbxc.x1m39q7l.xyorhqc.x540dpk.x2b8uid").count();
-            if (errorMessage > 0) {
-                console.log("Ошибка входа: неверные данные.");
-                await browser.close();
-                return reply.send({ error: true, message: "Неверный логин или пароль" });
-            }
-
             if (currentUrl !== "https://www.instagram.com/accounts/login/") {
                 loginSuccess = true;
                 break;
+            }
+
+            // Проверка на наличие других возможных ошибок (например, 2FA)
+            const twoFactorMessage = await page.locator("div[class*='two-factor']").count();
+            if (twoFactorMessage > 0) {
+                console.log("Необходима двухфакторная аутентификация.");
+                await browser.close();
+                return reply.send({ error: true, message: "Необходима двухфакторная аутентификация" });
             }
         }
 
