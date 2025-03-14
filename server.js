@@ -47,7 +47,7 @@ app.post("/check", async (request, reply) => {
 
     console.log(`Начинаем проверку логина для пользователя: ${username}`);
 
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
 
     try {
