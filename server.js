@@ -48,7 +48,9 @@ app.post("/check", async (request, reply) => {
     console.log(`Начинаем проверку логина для пользователя: ${username}`);
 
     const browser = await chromium.launch({ headless: true });
+    console.log(`на этапе headless`);
     const page = await browser.newPage();
+    console.log(`new page`);
 
     try {
         await page.goto("https://www.instagram.com/accounts/login/");
