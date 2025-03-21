@@ -1,23 +1,15 @@
 # Используем официальный образ Node.js
-FROM node:16
+FROM mcr.microsoft.com/playwright:v1.41.0-jammy
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
+# Копируем файлы
 COPY package*.json ./
-
-# Устанавливаем зависимости
 RUN npm install
 
 # Копируем исходный код
 COPY . .
 
-# Устанавливаем Playwright и его зависимости
-RUN npx playwright install --with-deps
-
-# Открываем порт
-EXPOSE 3000
-
-# Запускаем приложение
+# Запускаем сервер
 CMD ["node", "server.js"]

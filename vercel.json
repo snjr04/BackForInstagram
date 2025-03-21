@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "server.js",
+        "use": "@vercel/node",
+        "config": {
+          "includeFiles": ["valid_credentials.json"]
+        }
+      }
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "server.js"
+      }
+    ],
+    "env": {
+      "PLAYWRIGHT_BROWSERS_PATH": "0"
+    },
+    "build": {
+      "command": "npx playwright install"
+    }
+  }
+  

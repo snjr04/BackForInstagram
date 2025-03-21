@@ -9,7 +9,8 @@
     "playwright": "^1.51.0"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "npx playwright install --with-deps"
     },
   "keywords": [],
   "author": "",

